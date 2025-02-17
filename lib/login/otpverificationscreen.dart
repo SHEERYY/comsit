@@ -1,3 +1,5 @@
+import 'package:comsit/login/controller/auth_controller.dart';
+import 'package:comsit/shared/loadingScreen.dart';
 import 'package:flutter/material.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
@@ -10,57 +12,73 @@ class OtpVerificationScreen extends StatefulWidget {
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final _otpController = TextEditingController();
   String email = '';
+  final AuthController authController = AuthController();
+
 
   @override
   Widget build(BuildContext context) {
-    final String email = ModalRoute.of(context)!.settings.arguments as String;
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('OTP Verification'),
-        backgroundColor: Colors.blue,
+        title: const Text(''),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'Verify your email',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.purple,
-              ),
+          const SizedBox(height: 20),
+          const Text(
+            'OTP VERIFICATION',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+              color: Color.fromARGB(255, 22, 108, 179),
             ),
-            const SizedBox(height: 10),
-            Text('An OTP has been sent to $email'),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _otpController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Enter OTP',
-                border: OutlineInputBorder(),
-              ),
+          ),
+          const SizedBox(height: 10),
+          const Text(''),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _otpController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Enter OTP sent to your email',
+              border: OutlineInputBorder(),
             ),
+          ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                // Verify OTP logic goes here
-                if (_otpController.text == '123456') { // Sample OTP validation
-                  // Proceed with registration
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('OTP Verified, Registration Successful!')),
+              onPressed: () async{
+                final otp = _otpController.text;
+
+                 showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (BuildContext context) {
+                      return LoadingScreen();
+                    },
                   );
-                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+
+                if (otp.isNotEmpty) {
+                  final response = await authController.verifyOtp(otp: otp);
+                    Navigator.of(context,rootNavigator: true).pop();
+                  if (response['success']) {
+
+                    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(response['message'])),
+                    );
+                  }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invalid OTP')),
+                    const SnackBar(content: Text('Please enter OTP')),
                   );
                 }
+              
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade800, foregroundColor: Colors.white),
               child: const Text('Verify OTP'),
             ),
           ],

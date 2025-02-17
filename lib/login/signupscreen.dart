@@ -1,4 +1,7 @@
+import 'package:comsit/shared/loadingScreen.dart';
 import 'package:flutter/material.dart';
+import './controller/auth_controller.dart';
+
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -7,24 +10,72 @@ class SignupScreen extends StatefulWidget {
   _SignupScreenState createState() => _SignupScreenState();
 }
 
+
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  String userName = '';
   String firstName = '';
   String lastName = '';
-  String gender = 'Male'; // Default
+  String gender = '';
   String email = '';
   String department = '';
 
   // TextEditingControllers to capture password and confirm password
   final TextEditingController passwordController = TextEditingController();
+  final AuthController _authController = AuthController();
   final TextEditingController confirmPasswordController = TextEditingController();
+  String? _formErrorMessage;
+  final String emailPattern = r'^[A-Za-z0-9.-]+@ISBSTUDENT.COMSATS.EDU.PK$';
 
-  final String emailPattern = r'^[A-Za-z0-9.-]+@isbstudent.comsats.edu.pk$';
-
-  void _createAccount() {
+  Future<void> _createAccount() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      Navigator.pushNamed(context, '/otp_verification', arguments: email);
+
+      if (passwordController.text != confirmPasswordController.text) {
+        setState(() {
+          _formErrorMessage = 'Passwords do not match';
+        });
+        return;
+      }
+
+
+     
+      
+      showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return LoadingScreen();
+      },
+    );
+
+      Map<String, dynamic>  result = await _authController.register(
+        email: email,
+        userName: userName,  
+        password: passwordController.text.trim(),
+        firstName: firstName,
+        lastName: lastName,
+        gender: gender,
+        department: department,
+        about: '', 
+      );
+
+      print(result);
+
+      Navigator.of(context,rootNavigator: true).pop();
+
+
+      if (result['success']) {
+        Navigator.pushNamed(context, '/otp_verification', arguments: email);
+      } else {
+          setState(() {
+          if (result['success'] == true) {
+            _formErrorMessage = null;
+          } else {
+            _formErrorMessage = result['message'] ;
+          }
+  });
+      }
     }
   }
 
@@ -39,10 +90,6 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign Up'),
-        backgroundColor: Colors.blue,
-      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -50,15 +97,28 @@ class _SignupScreenState extends State<SignupScreen> {
           child: ListView(
             children: <Widget>[
               const Text(
-                'Create an Account',
+                'Create Account',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.purple,
+                  color: Color.fromARGB(255, 21, 101, 192),
                 ),
               ),
               const SizedBox(height: 20),
               // First Name Input
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'User Name'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your User name';
+                  }
+                  return null;
+                },
+                onSaved: (value) {
+                  userName = value!;
+                },
+              ),
+              const SizedBox(height: 10),
               TextFormField(
                 decoration: const InputDecoration(labelText: 'First Name'),
                 validator: (value) {
@@ -89,8 +149,8 @@ class _SignupScreenState extends State<SignupScreen> {
               // Gender Dropdown
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(labelText: 'Gender'),
-                value: gender,
-                items: ['Male', 'Female', 'Prefer not to say']
+                 value: gender.isEmpty ? 'Others' : gender,
+                items: ['Male', 'Female', 'Others']
                     .map((label) => DropdownMenuItem(
                           value: label,
                           child: Text(label),
@@ -108,13 +168,13 @@ class _SignupScreenState extends State<SignupScreen> {
                 decoration: const InputDecoration(labelText: 'University Email'),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || !RegExp(emailPattern).hasMatch(value.toLowerCase())) {
+                  if (value == null || !RegExp(emailPattern).hasMatch(value)) {
                     return 'Please enter a valid university email (e.g. FA21-BDS-019@ISBSTUDENT.COMSATS.EDU.PK)';
                   }
                   return null;
                 },
                 onSaved: (value) {
-                  email = value!.toLowerCase(); // Save the email in lowercase
+                  email = value!; // Save the email in lowercase
                 },
               ),
               const SizedBox(height: 10),
@@ -166,7 +226,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ElevatedButton(
                 onPressed: _createAccount,
                 style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white, backgroundColor: Colors.blue, // Button text color
+                  foregroundColor: Colors.white, backgroundColor: Colors.blue.shade800, // Button text color
                 ),
                 child: const Text('Create'),
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import './controller/auth_controller.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   @override
@@ -7,28 +8,55 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _authController = AuthController();
   String email = '';
+  String? _formErrorMessage;
 
-  final String emailPattern = r'^[A-Za-z0-9.-]+@isbstudent.comsats.edu.pk$';
+  final String emailPattern = r'^[A-Za-z0-9.-]+@ISBSTUDENT\.COMSATS\.EDU\.PK$';
 
-  void _sendResetLink() {
+  void _sendResetLink() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      // Logic to send the reset link to the user's email goes here
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Password reset link sent to $email')),
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return const Center(child: CircularProgressIndicator());
+        },
       );
-      Navigator.pushNamed(context, '/login');
+          try {
+            Map<String, dynamic> response = await _authController.requestPasswordReset(email);
+
+            Navigator.pop(context);
+
+            if (response['success']) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(response['message']),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              Navigator.pushReplacementNamed(context, '/otp_reset');
+            } else {
+              setState(() {
+                _formErrorMessage = response['message'];
+              });
+            }
+          } catch (e) {
+            Navigator.pop(context);
+            setState(() {
+              _formErrorMessage = 'An error occurred. Please try again later.';
+            });
+          }
+
+
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Forgot Password'),
-        backgroundColor: Colors.blue,
-      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -36,50 +64,45 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Text(
+              const Text(
                 'Reset Password',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.purple,
+                  color: Color.fromARGB(255, 21, 101, 192),
                 ),
               ),
-              SizedBox(height: 20),
-              Text(
-                'Enter your university email to reset your password',
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 20),
+              const SizedBox(height: 10),
               TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'University Email',
+                decoration: const InputDecoration(
+                  labelText: 'Enter your University Email',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || !RegExp(emailPattern).hasMatch(value.toLowerCase())) {
+                  if (value == null || !RegExp(emailPattern).hasMatch(value)) {
                     return 'Please enter a valid university email (e.g. FA21-BDS-019@ISBSTUDENT.COMSATS.EDU.PK)';
                   }
                   return null;
                 },
                 onSaved: (value) {
-                  email = value!.toLowerCase(); // Save the email in lowercase
+                  email = value!; // Save the email in lowercase
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _sendResetLink,
                 style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white, backgroundColor: Colors.blue, // Button text color set to white
+                  foregroundColor: Colors.white, backgroundColor: Colors.blue.shade800, // Button text color set to white
                 ),
-                child: Text('Send Reset Link'),
+                child: const Text('Send OTP'),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               TextButton(
                 onPressed: () {
                   Navigator.pushNamed(context, '/login');
                 },
-                child: Text('Back to Login', style: TextStyle(color: Colors.purple)),
+                child: const Text('Back to Login', style: TextStyle(color: Colors.purple)),
               ),
             ],
           ),
